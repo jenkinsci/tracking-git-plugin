@@ -1,0 +1,15 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+	<f:optionalBlock name="track-git"
+		title="${%Track Git source of another project}" checked="${instance!=null}"
+		>
+		<f:nested>
+			<f:entry title="Project to track" field="sourceProject">
+				<f:textbox/>
+			</f:entry>
+			<f:entry title="Build to track" field="toTrack">
+				<f:enum >${it.toString()}</f:enum>
+			</f:entry>
+		</f:nested>
+	</f:optionalBlock>
+</j:jelly>

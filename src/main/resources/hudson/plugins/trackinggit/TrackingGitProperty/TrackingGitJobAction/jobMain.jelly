@@ -1,0 +1,10 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <table style="margin-top: 1em; margin-left:1em;">
+	<t:summary icon="star.gif">
+		Tracking Git of <a href="${app.rootUrl}${app.getItem(it.parent.sourceProject).url}">${it.parent.sourceProject}</a> 
+		<st:nbsp/><a href="${app.rootUrl}${it.parent.trackedBuild.url}">${it.parent.trackedBuild.displayName}</a>
+		 (${it.parent.toTrack.toString().toLowerCase()})
+	</t:summary>
+	</table>
+</j:jelly>

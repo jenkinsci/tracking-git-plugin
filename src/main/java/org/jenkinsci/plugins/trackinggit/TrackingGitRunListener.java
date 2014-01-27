@@ -37,7 +37,7 @@ public class TrackingGitRunListener extends RunListener<AbstractBuild> {
 		}
 
 		RevisionParameterAction action = new RevisionParameterAction(buildData
-				.getLastBuiltRevision().getSha1String());
+				.getLastBuiltRevision());
 		r.addAction(action);
 		r.addAction(new TrackingGitAction(trackedBuild));
 	}

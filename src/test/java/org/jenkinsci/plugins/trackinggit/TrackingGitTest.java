@@ -2,16 +2,9 @@ package org.jenkinsci.plugins.trackinggit;
 
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.plugins.git.BranchSpec;
-import hudson.plugins.git.SubmoduleConfig;
-import hudson.plugins.git.GitSCM;
-import hudson.plugins.git.util.DefaultBuildChooser;
 import hudson.plugins.git.util.BuildData;
 
-import java.util.Collections;
-
 import org.jenkinsci.plugins.trackinggit.TrackingGitProperty.ToTrack;
-import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.UnstableBuilder;
 
 public class TrackingGitTest extends AbstractGitTestCase {
@@ -53,6 +46,10 @@ public class TrackingGitTest extends AbstractGitTestCase {
 		revision2 = buildAndGetRevision(p2);
 		assertFalse(newRevision1 == revision2);
 		assertEquals(revision1, revision2);
+		
+		if (System.getProperty("os.name").startsWith("Windows")) {
+			  System.gc(); // Prevents exceptions cleaning up temp dirs during tearDown
+		}		
 	}
 
 	private String buildAndGetRevision(FreeStyleProject p) throws Exception {
@@ -60,47 +57,5 @@ public class TrackingGitTest extends AbstractGitTestCase {
 		System.out.println(getLog(b));
 		BuildData buildData = b.getAction(BuildData.class);
 		return buildData.getLastBuiltRevision().getSha1String();
-	}
-
-	private FreeStyleProject setupProject(String branchString,
-			boolean authorOrCommitter) throws Exception {
-		return setupProject(branchString, authorOrCommitter, null);
-	}
-
-	private FreeStyleProject setupProject(String branchString,
-			boolean authorOrCommitter, String relativeTargetDir)
-			throws Exception {
-		return setupProject(branchString, authorOrCommitter, relativeTargetDir,
-				null, null, null);
-	}
-
-	private FreeStyleProject setupProject(String branchString,
-			boolean authorOrCommitter, String relativeTargetDir,
-			String excludedRegions, String excludedUsers, String includedRegions)
-			throws Exception {
-		return setupProject(branchString, authorOrCommitter, relativeTargetDir,
-				excludedRegions, excludedUsers, null, false, includedRegions);
-	}
-
-	private FreeStyleProject setupProject(String branchString,
-			boolean authorOrCommitter, String relativeTargetDir,
-			String excludedRegions, String excludedUsers, String localBranch,
-			boolean fastRemotePoll, String includedRegions) throws Exception {
-		FreeStyleProject project = createFreeStyleProject();
-		project.setScm(new GitSCM(null,
-				createRemoteRepositories(relativeTargetDir), Collections
-						.singletonList(new BranchSpec(branchString)), null,
-				false, Collections.<SubmoduleConfig> emptyList(), false, false,
-				new DefaultBuildChooser(), null, null, authorOrCommitter,
-				relativeTargetDir, null, excludedRegions, excludedUsers,
-				localBranch, false, false, false, fastRemotePoll, null, null,
-				false, includedRegions, false, false));
-		project.getBuildersList().add(new CaptureEnvironmentBuilder());
-		return project;
-	}
-
-	private FreeStyleProject setupSimpleProject(String branchString)
-			throws Exception {
-		return setupProject(branchString, false);
 	}
 }

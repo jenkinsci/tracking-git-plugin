@@ -2,9 +2,11 @@
 	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <table style="margin-top: 1em; margin-left:1em;">
 	<t:summary icon="star.gif">
-		Tracking Git of <a href="${app.rootUrl}${app.getItem(it.parent.sourceProject).url}">${it.parent.sourceProject}</a> 
-		<st:nbsp/><a href="${app.rootUrl}${it.parent.trackedBuild.url}">${it.parent.trackedBuild.displayName}</a>
-		 (${it.parent.toTrack.toString().toLowerCase()})
+		Tracking Git of <a href="${app.rootUrl}${app.getItem(it.parent.sourceProject).url}">${it.parent.sourceProject}</a><st:nbsp/>(${it.parent.toTrack.toString().toLowerCase()}) 
+		<br />Last tracked build:<st:nbsp/><a href="${app.rootUrl}${it.parent.lastTrackedBuild.url}">${it.parent.lastTrackedBuild.displayName}</a>
+		<j:if test="${it.parent.canDetermineNextTrackedBuild()}"> 
+        	<br />Next Tracked build:<st:nbsp/><a href="${app.rootUrl}${it.parent.nextTrackedBuild.url}">${it.parent.nextTrackedBuild.displayName}</a>
+     	</j:if>
 	</t:summary>
 	</table>
 </j:jelly>

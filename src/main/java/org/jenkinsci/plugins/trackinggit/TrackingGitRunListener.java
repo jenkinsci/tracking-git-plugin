@@ -23,8 +23,7 @@ public class TrackingGitRunListener extends RunListener<AbstractBuild> {
 		if (property == null) {
 			return;
 		}
-
-		Run<?, ?> trackedBuild = property.getTrackedBuild();
+		Run<?, ?> trackedBuild = property.getTrackedBuild(r, listener);
 		listener.getLogger().println(
 				"Tracking Git of " + trackedBuild.getFullDisplayName());
 

@@ -10,6 +10,9 @@
 			<f:entry title="Build to track" field="toTrack">
 				<f:enum >${it.toString()}</f:enum>
 			</f:entry>
+			<f:entry title="Build Number" field="buildNumberVariable">
+			    <f:textbox/>
+			</f:entry>
 		</f:nested>
 	</f:optionalBlock>
 </j:jelly>

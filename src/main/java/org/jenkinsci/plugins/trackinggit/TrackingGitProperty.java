@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.trackinggit;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Action;
@@ -7,6 +8,8 @@ import hudson.model.Item;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
 import hudson.model.ProminentProjectAction;
+import hudson.model.TaskListener;
+import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Hudson;
 import hudson.model.Job;
@@ -53,6 +56,18 @@ public class TrackingGitProperty extends JobProperty<AbstractProject<?, ?>> {
 			public Run<?, ?> getBuild(Job<?, ?> project) {
 				return project.getLastFailedBuild();
 			}
+		},
+		BY_NUMBER("By Number") {
+
+			@Override
+			public Run<?, ?> getBuild(Job<?, ?> project) {
+				throw new UnsupportedOperationException();
+			}
+			
+			@Override
+			public boolean canDetermineNextTrackedBuild(){
+				return false;
+			}
 		};
 
 		private String displayValue;
@@ -67,15 +82,21 @@ public class TrackingGitProperty extends JobProperty<AbstractProject<?, ?>> {
 		public String toString() {
 			return displayValue;
 		}
+		
+		public boolean canDetermineNextTrackedBuild(){
+			return true;
+		}
 	}
 
 	private final String sourceProject;
+	private final String buildNumberVariable;
 	private final ToTrack toTrack;
 
 	@DataBoundConstructor
-	public TrackingGitProperty(String sourceProject, ToTrack toTrack) {
+	public TrackingGitProperty(String sourceProject, ToTrack toTrack, String buildNumberVariable) {
 		super();
 		this.sourceProject = Util.fixEmptyAndTrim(sourceProject);
+		this.buildNumberVariable = Util.fixEmptyAndTrim(buildNumberVariable);
 		this.toTrack = toTrack;
 
 		if (sourceProject == null) {
@@ -88,6 +109,11 @@ public class TrackingGitProperty extends JobProperty<AbstractProject<?, ?>> {
 		}
 	}
 
+	// do we need to keep the old constructor for backwards compatability?
+	public TrackingGitProperty(String sourceProject, ToTrack toTrack) {
+		this(sourceProject, toTrack, null);
+	}
+
 	public String getSourceProject() {
 		return sourceProject;
 	}
@@ -95,6 +121,11 @@ public class TrackingGitProperty extends JobProperty<AbstractProject<?, ?>> {
 	public ToTrack getToTrack() {
 		return toTrack;
 	}
+	
+	public String getBuildNumberVariable(){
+		return buildNumberVariable;
+	}
+	
 
 	@Extension
 	public static class DescriptorImpl extends JobPropertyDescriptor {
@@ -155,21 +186,97 @@ public class TrackingGitProperty extends JobProperty<AbstractProject<?, ?>> {
 		}
 	}
 
+	/**
+	 * Lookup what build was used in the last build action
+	 */
 	@SuppressWarnings("rawtypes")
-	public Run getTrackedBuild() throws TrackingGitException {
+	public Run getLastTrackedBuild() throws TrackingGitException {
 		Job<?, ?> job = (Job<?, ?>) Hudson.getInstance().getItem(sourceProject);
 		if (job == null)
 			throw new TrackingGitException(
 					"Unknown source project for tracking-git : "
 							+ sourceProject);
+		
+
+		Run<?, ?> lastOwnerRun = owner.getLastBuild();
+		if (null == lastOwnerRun){
+			return null;
+		}
+		
+		TrackingGitAction tga = lastOwnerRun.getAction(org.jenkinsci.plugins.trackinggit.TrackingGitAction.class);
+		if (null == tga){
+			return null;
+		}
+		
+		Run<?, ?> run = tga.getTrackedBuild();
+		return run;
+	}
+	
+	/**
+	 * Can we determine the next build which will be tracked
+	 * True for lastStable, lastSuccessful
+	 * False if we have to work it out at build time.
+	 */
+	public boolean canDetermineNextTrackedBuild(){
+		return toTrack.canDetermineNextTrackedBuild();
+	}
+	
+	@SuppressWarnings("rawtypes")
+	public Run getNextTrackedBuild() throws TrackingGitException {
+		Job<?, ?> job = (Job<?, ?>) Hudson.getInstance().getItem(sourceProject);
+		if (job == null)
+			throw new TrackingGitException(
+					"Unknown source project for tracking-git : "
+							+ sourceProject);
+
 		Run<?, ?> run = toTrack.getBuild(job);
+		
 		if (run == null)
 			throw new TrackingGitException(toTrack + " not found for project "
 					+ sourceProject);
-
 		return run;
 	}
 
+	/**
+	 * Get tracked build using current build and listener so we can resolve 
+	 * variables if required.
+	 */
+	@SuppressWarnings("rawtypes")
+	public Run getTrackedBuild(AbstractBuild<?, ?> r, TaskListener listener) throws TrackingGitException {
+		Job<?, ?> job = (Job<?, ?>) Hudson.getInstance().getItem(sourceProject);
+		if (job == null)
+			throw new TrackingGitException(
+					"Unknown source project for tracking-git : "
+							+ sourceProject);
+
+		Run<?, ?> run;
+		
+		switch (toTrack) {
+		    case BY_NUMBER:
+		    	run = job.getBuildByNumber(resolveBuildNumber(r, listener));
+			    break;
+		    default:
+			    run = toTrack.getBuild(job);
+			    break;
+		}
+		if (run == null)
+			throw new TrackingGitException(toTrack + " not found for project "
+					+ sourceProject);
+		return run;
+	}
+
+	@SuppressWarnings("rawtypes")
+	private int resolveBuildNumber(AbstractBuild r, TaskListener listener){
+		try {
+			EnvVars environmentVariables = r.getEnvironment(listener);
+			int buildNumber = Integer.parseInt(environmentVariables.expand(buildNumberVariable));
+            return buildNumber;
+		} catch (Exception e) {
+			e.printStackTrace(System.out);
+			throw new TrackingGitException("Exception resolving build number to track");
+		}
+	}
+	
 	@Override
 	public Collection<Action> getJobActions(AbstractProject<?, ?> job) {
 		return Collections.<Action> singleton(new TrackingGitJobAction());
